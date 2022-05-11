@@ -46,7 +46,7 @@ export async function useCreateChangesetsWithChangeTypes() {
   return {
     setChangeTypeList: async () => {
       chosenChangeTypeList = await getChangeTypeList();
-      isWithChangeTypes = chosenChangeTypeList.length > 0;
+      isWithChangeTypes = chosenChangeTypeList?.length > 0;
     },
     setReleases: async (newReleases: Release[]) => {
       if (!isWithChangeTypes) return;
