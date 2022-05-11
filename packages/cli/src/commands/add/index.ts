@@ -52,7 +52,8 @@ export default async function add(
         config,
         open,
         packages: packages.packages,
-        changesets: newChangeset
+        changesets: newChangeset,
+        writeChangeset
       };
       await writeChangesetList(functionArguments);
       return;

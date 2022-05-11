@@ -3,6 +3,7 @@ import path from "path";
 import prettier from "prettier";
 import humanId from "human-id";
 import { Changeset } from "@changesets/types";
+import { getChangesetContent } from "../../cli/src/commands/add/changeTypes";
 
 async function writeChangeset(
   changeset: Changeset,
@@ -23,10 +24,17 @@ async function writeChangeset(
 
   const newChangesetPath = path.resolve(changesetBase, `${changesetID}.md`);
 
+  const releasesGroupedByBumpTypes = getChangesetContent(
+    releases,
+    summary,
+    true
+  );
   // NOTE: The quotation marks in here are really important even though they are
   // not spec for yaml. This is because package names can contain special
   // characters that will otherwise break the parsing step
-  const changesetContents = `---
+  const changesetContents =
+    releasesGroupedByBumpTypes ||
+    `---
 ${releases.map(release => `"${release.name}": ${release.type}`).join("\n")}
 ---
 

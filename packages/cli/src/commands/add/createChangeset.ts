@@ -11,7 +11,7 @@ import {
 } from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
-import { createChangesetsWithChangeTypes } from "./changeTypes";
+import { useCreateChangesetsWithChangeTypes } from "./changeTypes";
 
 const { green, yellow, red, bold, blue, cyan } = chalk;
 
@@ -106,6 +106,13 @@ export default async function createChangeset(
   allPackages: Package[]
 ): Promise<ChangesetWithConfirmed | Array<ChangesetWithConfirmed>> {
   const releases: Array<Release> = [];
+  const {
+    setChangeTypeList,
+    setReleases,
+    setChangesetList,
+    setSummaries,
+    getFinalChangesetList
+  } = await useCreateChangesetsWithChangeTypes();
 
   if (allPackages.length > 1) {
     const packagesToRelease = await getPackagesToRelease(
@@ -119,10 +126,7 @@ export default async function createChangeset(
 
     let pkgsLeftToGetBumpTypeFor = new Set(packagesToRelease);
 
-    const createdChangesets = await createChangesetsWithChangeTypes(
-      pkgsLeftToGetBumpTypeFor
-    );
-    if (createdChangesets) return createdChangesets;
+    await setChangeTypeList();
 
     let pkgsThatShouldBeMajorBumped = (
       await cli.askCheckboxPlus(
@@ -223,8 +227,7 @@ export default async function createChangeset(
   } else {
     let pkg = allPackages[0];
 
-    const createdChangesets = await createChangesetsWithChangeTypes();
-    if (createdChangesets) return createdChangesets;
+    await setChangeTypeList();
 
     let type = await cli.askList(
       `What kind of change is this for ${green(
@@ -240,6 +243,11 @@ export default async function createChangeset(
     }
     releases.push({ name: pkg.packageJson.name, type });
   }
+  await setReleases(releases);
+  await setChangesetList();
+  await setSummaries();
+  const changesets = await getFinalChangesetList();
+  if (changesets?.length) return changesets;
 
   log(
     "Please enter a summary for this change (this will be in the changelogs)."

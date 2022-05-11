@@ -5,14 +5,15 @@ import {
   EmptyString,
   Release,
   Config,
-  VersionType
+  VersionType,
+  Changeset
 } from "@changesets/types";
 import path from "path";
-import writeChangeset from "@changesets/write";
 import { Package } from "@manypkg/get-packages";
 import chalk from "chalk";
 import { ExternalEditor } from "external-editor";
 import spawn from "spawndamnit";
+// import writeChangeset from "@changesets/write";
 
 import { getCommitFunctions } from "../../commit/getCommitFunctions";
 import * as cli from "../../utils/cli-utilities";
@@ -35,19 +36,44 @@ export function getKindTitle(kind: string) {
 }
 
 type PreviousAnswers = { [key in string]: string };
-type Packages = Set<string> | string;
 
-export async function createChangesetsWithChangeTypes(packages: Packages) {
+export async function useCreateChangesetsWithChangeTypes() {
+  let isWithChangeTypes: boolean = false;
   let releases: Release[] = [];
-  const chosenChangeTypeList = await getChangeTypeList();
+  let chosenChangeTypeList: string[] = [];
+  let changesetList: ChangesetWithConfirmed[] = [];
 
-  releases = await getReleases(packages);
-  const shouldAskChangeTypes = chosenChangeTypeList.length > 0;
-  if (!shouldAskChangeTypes) return false;
+  return {
+    setChangeTypeList: async () => {
+      chosenChangeTypeList = await getChangeTypeList();
+      isWithChangeTypes = chosenChangeTypeList.length > 0;
+    },
+    setReleases: async (newReleases: Release[]) => {
+      if (!isWithChangeTypes) return;
+      releases = newReleases;
+    },
+    setChangesetList: async () => {
+      if (!isWithChangeTypes) return;
+      if (!releases.length || !chosenChangeTypeList.length)
+        throw new Error("releases and chosenChangeTypeList must be set");
 
-  const changesetList = await getChangesetList(releases, chosenChangeTypeList);
+      changesetList = await getChangesetList(releases, chosenChangeTypeList);
+    },
+    setSummaries: async () => {
+      if (!isWithChangeTypes) return;
+      if (!changesetList.length)
+        throw new Error("releases and chosenChangeTypeList must be set");
 
-  for (let changeset of changesetList) await setSummary(changeset);
+      for (let changeset of changesetList) await setSummary(changeset);
+    },
+    getFinalChangesetList: async () => {
+      if (!isWithChangeTypes) return;
+      if (!changesetList.length)
+        throw new Error("releases and chosenChangeTypeList must be set");
+
+      return changesetList;
+    }
+  };
 }
 
 async function getChangeTypeList() {
@@ -171,6 +197,7 @@ type WriteChangesetListArgs = {
   empty?: boolean;
   config: Config;
   open?: boolean;
+  writeChangeset: (changeset: Changeset, cwd: string) => Promise<string>;
 };
 export async function writeChangesetList({
   changesets,
@@ -179,7 +206,8 @@ export async function writeChangesetList({
   changesetBase,
   empty,
   config,
-  open
+  open,
+  writeChangeset
 }: WriteChangesetListArgs) {
   for (let changeset of changesets) {
     printConfirmationMessage(changeset, packages.length > 1);
@@ -194,6 +222,7 @@ export async function writeChangesetList({
     if (!changeset.confirmed) continue;
 
     const changesetID = await writeChangeset(changeset, cwd);
+
     const [{ getAddMessage }, commitOpts] = getCommitFunctions(
       config.commit,
       cwd
@@ -295,4 +324,65 @@ async function setSummary(changeSet: ChangesetWithConfirmed) {
 
   changeSet.summary = summary;
   changeSet.confirmed = false;
+}
+
+function groupByBumpType(releases: Release[]) {
+  const major: Release[] = [];
+  const minor: Release[] = [];
+  const patch: Release[] = [];
+  const none: Release[] = [];
+
+  releases.forEach(rel => {
+    if (rel.type === "major") major.push(rel);
+    else if (rel.type === "minor") minor.push(rel);
+    else if (rel.type === "patch") patch.push(rel);
+    else major.push(rel);
+  });
+  return { major, minor, patch, none };
+}
+function getReleasesSection(releases: Release[]) {
+  return `---
+${releases.map(release => `"${release.name}": ${release.type}`).join("\n")}
+---\n`;
+}
+function getChangeTypesSection(releases: Release[], bumpType?: VersionType) {
+  const filteredReleases = bumpType
+    ? releases.filter(({ type }) => type === bumpType)
+    : releases;
+
+  return `${filteredReleases
+    .flatMap(rel => rel.changeTypes || [])
+    .map(chk => `- [ ${getKindTitle(chk.category)} ] ${chk.description}`)
+    .join("\n")}\n`;
+}
+
+export function getChangesetContent(
+  releases: Release[],
+  summary: string,
+  splitReleasesByBumpType = false
+) {
+  if (splitReleasesByBumpType && releases.some(rel => rel.changeTypes)) {
+    const grouped = Object.entries(groupByBumpType(releases)).filter(
+      ([, releases]) => releases.length
+    ) as [VersionType, Release[]][];
+
+    return `${grouped
+      .map(
+        ([bumpType, releases]) =>
+          `${getReleasesSection(releases)}
+${getChangeTypesSection(releases, bumpType)}`
+      )
+      .join("\n")}
+
+${summary}
+`;
+  }
+
+  if (releases.some(rel => rel.changeTypes))
+    return `${getReleasesSection(releases)} 
+  ${getChangeTypesSection(releases)}
+
+${summary}
+`;
+  return null;
 }
