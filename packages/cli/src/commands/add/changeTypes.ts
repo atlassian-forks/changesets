@@ -37,43 +37,63 @@ export function getKindTitle(kind: string) {
 
 type PreviousAnswers = { [key in string]: string };
 
-export async function useCreateChangesetsWithChangeTypes() {
-  let isWithChangeTypes: boolean = false;
-  let releases: Release[] = [];
-  let chosenChangeTypeList: string[] = [];
-  let changesetList: ChangesetWithConfirmed[] = [];
+// function WithChangeTypes(
+//   target: any,
+//   propertyName: string,
+//   descriptor: TypedPropertyDescriptor<any>
+// ) {
+//   let method = descriptor.value!;
 
-  return {
-    setChangeTypeList: async () => {
-      chosenChangeTypeList = await getChangeTypeList();
-      isWithChangeTypes = chosenChangeTypeList?.length > 0;
-    },
-    setReleases: async (newReleases: Release[]) => {
-      if (!isWithChangeTypes) return;
-      releases = newReleases;
-    },
-    setChangesetList: async () => {
-      if (!isWithChangeTypes) return;
-      if (!releases.length || !chosenChangeTypeList.length)
-        throw new Error("releases and chosenChangeTypeList must be set");
+//   descriptor.value = function() {
+//     if (!target.isWithChangeTypes) return null;
+//   };
+//   return method.apply(this, arguments);
+// }
 
-      changesetList = await getChangesetList(releases, chosenChangeTypeList);
-    },
-    setSummaries: async () => {
-      if (!isWithChangeTypes) return;
-      if (!changesetList.length)
-        throw new Error("releases and chosenChangeTypeList must be set");
+export class ChangesetsWithChangeTypes {
+  private isWithChangeTypes: boolean = false;
+  private releases: Release[] = [];
+  private chosenChangeTypeList: string[] = [];
+  private changesetList: ChangesetWithConfirmed[] = [];
 
-      for (let changeset of changesetList) await setSummary(changeset);
-    },
-    getFinalChangesetList: async () => {
-      if (!isWithChangeTypes) return;
-      if (!changesetList.length)
-        throw new Error("releases and chosenChangeTypeList must be set");
+  async setChangeTypeList() {
+    const chosenChangeTypeList = await getChangeTypeList();
+    this.chosenChangeTypeList = chosenChangeTypeList;
+    this.isWithChangeTypes = chosenChangeTypeList?.length > 0;
+  }
 
-      return changesetList;
-    }
-  };
+  async setReleases(newReleases: Release[]) {
+    if (!this.isWithChangeTypes) return;
+    this.releases = newReleases;
+  }
+
+  async setChangesetList() {
+    if (!this.isWithChangeTypes) return;
+    if (!this.releases.length || !this.chosenChangeTypeList.length)
+      throw new Error("releases and chosenChangeTypeList must be set");
+
+    this.changesetList = await getChangesetList(
+      this.releases,
+      this.chosenChangeTypeList
+    );
+  }
+
+  // @WithChangeTypes
+  async setSummaries() {
+    if (!this.isWithChangeTypes) return;
+    if (!this.changesetList.length)
+      throw new Error("changesetList must be set");
+
+    for (let changeset of this.changesetList) await setSummary(changeset);
+  }
+
+  async getFinalChangesetList() {
+    if (!this.isWithChangeTypes) return;
+    if (!this.changesetList.length)
+      throw new Error("changesetList must be set");
+
+    return this.changesetList;
+  }
 }
 
 async function getChangeTypeList() {

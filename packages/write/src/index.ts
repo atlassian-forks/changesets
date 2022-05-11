@@ -24,11 +24,7 @@ async function writeChangeset(
 
   const newChangesetPath = path.resolve(changesetBase, `${changesetID}.md`);
 
-  const releasesGroupedByBumpTypes = getChangesetContent(
-    releases,
-    summary,
-    true
-  );
+  const releasesGroupedByBumpTypes = getChangesetContent(releases, summary);
   // NOTE: The quotation marks in here are really important even though they are
   // not spec for yaml. This is because package names can contain special
   // characters that will otherwise break the parsing step
