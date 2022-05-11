@@ -13,6 +13,7 @@ import { getCommitFunctions } from "../../commit/getCommitFunctions";
 import createChangeset from "./createChangeset";
 import printConfirmationMessage from "./messages";
 import { ExternalEditor } from "external-editor";
+import { writeChangesetList } from "./changeTypes";
 
 type UnwrapPromise<T extends Promise<any>> = T extends Promise<infer R>
   ? R
@@ -42,6 +43,21 @@ export default async function add(
       .filter(a => a)
       .map(pkg => pkg.packageJson.name);
     newChangeset = await createChangeset(changePackagesName, packages.packages);
+
+    if (Array.isArray(newChangeset)) {
+      const functionArguments = {
+        cwd,
+        changesetBase,
+        empty,
+        config,
+        open,
+        packages: packages.packages,
+        changesets: newChangeset
+      };
+      await writeChangesetList(functionArguments);
+      return;
+    }
+
     printConfirmationMessage(newChangeset, packages.packages.length > 1);
 
     if (!newChangeset.confirmed) {

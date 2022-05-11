@@ -4,9 +4,14 @@ import semver from "semver";
 
 import * as cli from "../../utils/cli-utilities";
 import { error, log } from "@changesets/logger";
-import { Release, PackageJSON } from "@changesets/types";
+import {
+  Release,
+  PackageJSON,
+  ChangesetWithConfirmed
+} from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
+import { createChangesetWithChangeTypes } from "./changeTypes";
 
 const { green, yellow, red, bold, blue, cyan } = chalk;
 
@@ -99,7 +104,7 @@ function formatPkgNameAndVersion(pkgName: string, version: string) {
 export default async function createChangeset(
   changedPackages: Array<string>,
   allPackages: Package[]
-): Promise<{ confirmed: boolean; summary: string; releases: Array<Release> }> {
+): Promise<ChangesetWithConfirmed | Array<ChangesetWithConfirmed>> {
   const releases: Array<Release> = [];
 
   if (allPackages.length > 1) {
@@ -113,6 +118,9 @@ export default async function createChangeset(
     );
 
     let pkgsLeftToGetBumpTypeFor = new Set(packagesToRelease);
+
+    const createdChangesets = await createChangesetWithChangeTypes(releases);
+    if (createdChangesets) return createdChangesets;
 
     let pkgsThatShouldBeMajorBumped = (
       await cli.askCheckboxPlus(

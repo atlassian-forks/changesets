@@ -13,7 +13,11 @@ export type DependencyType = typeof DEPENDENCY_TYPES[number];
 
 export type AccessType = "public" | "restricted";
 
-export type Release = { name: string; type: VersionType };
+export type Release = {
+  name: string;
+  type: VersionType;
+  changeTypes?: ChangeType[];
+};
 
 // This is a release that has been modified to include all relevant information
 // about releasing - it is calculated and doesn't make sense as an artefact
@@ -28,6 +32,17 @@ export type ComprehensiveRelease = {
 export type Changeset = {
   summary: string;
   releases: Array<Release>;
+};
+
+export type EmptyString = ``;
+
+export type ChangeType = {
+  category: string;
+  description: string;
+};
+
+export type ChangesetWithConfirmed = Changeset & {
+  confirmed: boolean;
 };
 
 export type NewChangeset = Changeset & {

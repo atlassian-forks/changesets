@@ -46,6 +46,7 @@ const mockUserResponses = mockResponses => {
   let callCount = 0;
   let returnValues = [
     Object.keys(mockResponses.releases),
+    [],
     majorReleases,
     minorReleases
   ];
