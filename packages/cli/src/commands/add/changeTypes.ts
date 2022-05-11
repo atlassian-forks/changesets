@@ -4,7 +4,8 @@ import {
   ChangesetWithConfirmed,
   EmptyString,
   Release,
-  Config
+  Config,
+  VersionType
 } from "@changesets/types";
 import path from "path";
 import writeChangeset from "@changesets/write";
@@ -34,14 +35,23 @@ export function getKindTitle(kind: string) {
 }
 
 type PreviousAnswers = { [key in string]: string };
+type Packages = Set<string> | string;
 
-export async function createChangesetWithChangeTypes(releases: Release[]) {
-  //   const changeTypeList: Array<ChangeType> = [];
-  const changesetList: Array<ChangesetWithConfirmed> = [];
-  const releaseWithChangeTypeList: Array<Release> = [];
-  let shouldAskChangeTypes = false;
+export async function createChangesetsWithChangeTypes(packages: Packages) {
+  let releases: Release[] = [];
+  const chosenChangeTypeList = await getChangeTypeList();
 
-  const chosenChangeTypeList = await cli.askCheckboxPlus(
+  releases = await getReleases(packages);
+  const shouldAskChangeTypes = chosenChangeTypeList.length > 0;
+  if (!shouldAskChangeTypes) return false;
+
+  const changesetList = await getChangesetList(releases, chosenChangeTypeList);
+
+  for (let changeset of changesetList) await setSummary(changeset);
+}
+
+async function getChangeTypeList() {
+  return cli.askCheckboxPlus(
     bold(`What kind of change are you making? (check all that apply)`),
     allCategoriesOfChange.map(changeType => ({
       name: changeType,
@@ -53,70 +63,106 @@ export async function createChangesetWithChangeTypes(releases: Release[]) {
       }
     }
   );
-  shouldAskChangeTypes = chosenChangeTypeList.length > 0;
-  if (!shouldAskChangeTypes) return false;
+}
 
+async function getChangesetList(
+  releases: Release[],
+  chosenChangeTypeList: string[]
+) {
+  const changesetList: Array<ChangesetWithConfirmed> = [];
   const bumpTypes = new Set(releases.map(rel => rel.type));
+
   const isSameMessageForAllPkgs = await cli.askConfirm(
     "Would you like to reuse the same message for all packages of this bump type?"
   );
 
   if (isSameMessageForAllPkgs) {
-    for (const bumpType of bumpTypes) {
-      const changeTypeList: Array<ChangeType> = [];
-      const pkgsForThisBumpType = releases
-        .filter(rel => rel.type === bumpType)
-        .map(rel => rel.name)
-        .join(", ");
+    const releaseWithChangeTypeList = await getReleasesPerBumpType(
+      bumpTypes,
+      releases,
+      chosenChangeTypeList
+    );
 
-      log(chalk.yellow(`${bumpType} :`), chalk.cyan(pkgsForThisBumpType));
-
-      for (const category of chosenChangeTypeList) {
-        const description = await cli.askQuestion(
-          `[ ${getKindTitle(category)} ]`
-        );
-        changeTypeList.push({ description, category });
-      }
-
-      const releasesWithChangeTypes = releases
-        .filter(rel => rel.type === bumpType)
-        .map(rel => ({ ...rel, changeTypes: changeTypeList }));
-
-      releaseWithChangeTypeList.push(...releasesWithChangeTypes);
-    }
     changesetList.push({
       releases: releaseWithChangeTypeList,
       confirmed: false,
       summary: ""
     });
   } else {
-    const previousAnswers: PreviousAnswers = {};
-    for (const release of releases) {
-      log(chalk.yellow(`${release.type} :`), chalk.cyan(release.name));
-      const currChangesetChangeTypeList: ChangeType[] = [];
+    const newChangesetList = await getReleasesPerPackage(
+      releases,
+      chosenChangeTypeList
+    );
+    changesetList.push(...newChangesetList);
+  }
+  return changesetList;
+}
 
-      for (const category of chosenChangeTypeList) {
-        const description = await getDescription(previousAnswers, category);
-        currChangesetChangeTypeList.push({
-          description,
-          category
-        });
-      }
-      const releaseWithChangeTypeList = [
-        { ...release, changeTypes: currChangesetChangeTypeList }
-      ];
-      changesetList.push({
-        confirmed: false,
-        summary: "",
-        releases: releaseWithChangeTypeList
+async function getReleasesPerBumpType(
+  bumpTypes: Set<VersionType>,
+  releases: Release[],
+  chosenChangeTypeList: string[]
+) {
+  const releaseWithChangeTypeList: Array<Release> = [];
+
+  for (const bumpType of bumpTypes) {
+    const changeTypeList: Array<ChangeType> = [];
+    const pkgsForThisBumpType = releases
+      .filter((rel: { type: any }) => rel.type === bumpType)
+      .map((rel: { name: any }) => rel.name)
+      .join(", ");
+
+    log(chalk.yellow(`${bumpType} :`), chalk.cyan(pkgsForThisBumpType));
+
+    for (const category of chosenChangeTypeList) {
+      const description = await cli.askQuestion(
+        `[ ${getKindTitle(category)} ]`
+      );
+      changeTypeList.push({ description, category });
+    }
+
+    const releasesWithChangeTypes = releases
+      .filter((rel: { type: any }) => rel.type === bumpType)
+      .map((rel: any) => ({ ...rel, changeTypes: changeTypeList }));
+
+    releaseWithChangeTypeList.push(...releasesWithChangeTypes);
+  }
+  return releaseWithChangeTypeList;
+}
+
+async function getReleasesPerPackage(
+  releases: Release[],
+  chosenChangeTypeList: string[]
+) {
+  const changesetList: Array<ChangesetWithConfirmed> = [];
+  const previousAnswers: PreviousAnswers = {};
+
+  for (const release of releases) {
+    log(chalk.yellow(`${release.type} :`), chalk.cyan(release.name));
+    const currChangeTypeList: ChangeType[] = [];
+
+    for (const category of chosenChangeTypeList) {
+      const description = await getDescriptionWithPrev(
+        previousAnswers,
+        category
+      );
+      currChangeTypeList.push({
+        description,
+        category
       });
     }
+    const releaseWithChangeTypeList = [
+      { ...release, changeTypes: currChangeTypeList }
+    ];
+    changesetList.push({
+      confirmed: false,
+      summary: "",
+      releases: releaseWithChangeTypeList
+    });
   }
-
-  for (let changeset of changesetList) {
-    await setSummary(changeset);
-  }
+  return changesetList;
 }
+
 type WriteChangesetListArgs = {
   changesets: ChangesetWithConfirmed[];
   packages: Package[];
@@ -200,7 +246,7 @@ export async function writeChangesetList({
   }
 }
 
-async function getDescription(
+async function getDescriptionWithPrev(
   previousAnswers: PreviousAnswers,
   category: string
 ) {

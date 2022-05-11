@@ -11,7 +11,7 @@ import {
 } from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
-import { createChangesetWithChangeTypes } from "./changeTypes";
+import { createChangesetsWithChangeTypes } from "./changeTypes";
 
 const { green, yellow, red, bold, blue, cyan } = chalk;
 
@@ -119,7 +119,9 @@ export default async function createChangeset(
 
     let pkgsLeftToGetBumpTypeFor = new Set(packagesToRelease);
 
-    const createdChangesets = await createChangesetWithChangeTypes(releases);
+    const createdChangesets = await createChangesetsWithChangeTypes(
+      pkgsLeftToGetBumpTypeFor
+    );
     if (createdChangesets) return createdChangesets;
 
     let pkgsThatShouldBeMajorBumped = (
@@ -220,6 +222,10 @@ export default async function createChangeset(
     }
   } else {
     let pkg = allPackages[0];
+
+    const createdChangesets = await createChangesetsWithChangeTypes();
+    if (createdChangesets) return createdChangesets;
+
     let type = await cli.askList(
       `What kind of change is this for ${green(
         pkg.packageJson.name
