@@ -152,6 +152,9 @@ describe("Changesets", () => {
     askQuestion.mockReturnValueOnce("");
     // @ts-ignore
     askQuestionWithEditor.mockReturnValueOnce(summary);
+    const noChangeTypes: never[] = [];
+    // @ts-ignore
+    askCheckboxPlus.mockReturnValueOnce(noChangeTypes);
     // @ts-ignore
     askConfirm.mockImplementation(question => {
       question = stripAnsi(question);
