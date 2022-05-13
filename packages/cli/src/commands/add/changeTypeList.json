@@ -1,0 +1,30 @@
+[
+    {
+      "title": "Added",
+      "text": "Added (New functionality, arg options, more UI elements)"
+    },
+    {
+      "title": "Changed",
+      "text": "Changed (Visual changes, internal changes, API changes)"
+    },
+    {
+      "title": "Removed",
+      "text": "Removed (Dead code, feature flags, consumer API's)"
+    },
+    {
+      "title": "Types",
+      "text":
+        "Types (Strictly related to the type system and should not have impact on runtime code) "
+    },
+    {
+      "title": "Documentation",
+      "text": "Documentation (README, general docs, package.json metadata)"
+    },
+    {
+      "title": "Infra",
+      "text":
+        "Infra (Tooling, performance, things that are under the hood but should have no impact if a consumer upgraded)"
+    },
+    { "title": "UX", "text": "UX (UX change)" },
+    { "title": "Misc", "text": "Misc (Anything else not noted above)" }
+]

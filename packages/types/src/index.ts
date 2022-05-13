@@ -36,8 +36,10 @@ export type Changeset = {
 
 export type EmptyString = ``;
 
+type ChangeTypeOption = { title: string; text: string };
+
 export type ChangeType = {
-  category: string;
+  category: ChangeTypeOption;
   description: string;
 };
 

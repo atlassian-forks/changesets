@@ -1,4 +1,4 @@
-import { info, log, warn } from "@changesets/logger";
+import { info, log } from "@changesets/logger";
 import {
   ChangeType,
   ChangesetWithConfirmed,
@@ -11,30 +11,18 @@ import {
 import path from "path";
 import { Package } from "@manypkg/get-packages";
 import chalk from "chalk";
-import { ExternalEditor } from "external-editor";
-import spawn from "spawndamnit";
-// import writeChangeset from "@changesets/write";
 
 import { getCommitFunctions } from "../../commit/getCommitFunctions";
 import * as cli from "../../utils/cli-utilities";
 import printConfirmationMessage from "./messages";
 import * as git from "@changesets/git";
+import { determineEditorHack, warnIfMajor } from ".";
+import changeTypeList from "./changeTypeList.json";
 
 const { bold, cyan } = chalk;
 
-const allCategoriesOfChange = [
-  "Added (New functionality, arg options, more UI elements)",
-  "Changed (Visual changes, internal changes, API changes)",
-  "Removed (Dead code, feature flags, consumer API's)",
-  "Types (Strictly related to the type system and should not have impact on runtime code) ",
-  "Documentation (README, general docs, package.json metadata)",
-  "Infra (Tooling, performance, things that are under the hood but should have no impact if a consumer upgraded)",
-  "UX (UX change)",
-  "Misc (Anything else not noted above)"
-];
-export function getKindTitle(kind: string) {
-  return kind.split(" ")[0];
-}
+type ChangeTypeOption = { title: string; text: string };
+const allChangeTypes: ChangeTypeOption[] = changeTypeList;
 
 type PreviousAnswers = { [key in string]: string };
 
@@ -42,7 +30,7 @@ export class ChangesetsWithChangeTypes {
   private config: Config;
   private isWithChangeTypes: boolean = false;
   private releases: Release[] = [];
-  private chosenChangeTypeList: string[] = [];
+  private chosenChangeTypeList: ChangeTypeOption[] = [];
   private changesetList: ChangesetWithConfirmed[] = [];
 
   constructor(config: Config) {
@@ -51,9 +39,14 @@ export class ChangesetsWithChangeTypes {
 
   async setChangeTypeList() {
     if (!this.config.shouldAskForChangeTypes) return;
-    const chosenChangeTypeList = await getChangeTypeList();
-    this.chosenChangeTypeList = chosenChangeTypeList;
-    this.isWithChangeTypes = chosenChangeTypeList?.length > 0;
+    const choosenTitleList = await getChangeTypeList();
+
+    this.chosenChangeTypeList = choosenTitleList.map(title => ({
+      title,
+      text: allChangeTypes.find(cht => cht.title === title)!.text
+    }));
+
+    this.isWithChangeTypes = choosenTitleList?.length > 0;
   }
 
   async setReleases(newReleases: Release[]) {
@@ -93,13 +86,13 @@ export class ChangesetsWithChangeTypes {
 async function getChangeTypeList() {
   return cli.askCheckboxPlus(
     bold(`What kind of change are you making? (check all that apply)`),
-    allCategoriesOfChange.map(changeType => ({
-      name: changeType,
-      message: changeType
+    allChangeTypes.map(changeType => ({
+      name: changeType.title,
+      message: changeType.text
     })),
     (chosenChangeTypeList: EmptyString | string[]) => {
       if (Array.isArray(chosenChangeTypeList)) {
-        return chosenChangeTypeList.map(x => cyan(getKindTitle(x))).join(", ");
+        return chosenChangeTypeList.map(x => cyan(x)).join(", ");
       }
     }
   );
@@ -107,7 +100,7 @@ async function getChangeTypeList() {
 
 async function getChangesetList(
   releases: Release[],
-  chosenChangeTypeList: string[]
+  chosenChangeTypeList: ChangeTypeOption[]
 ) {
   const changesetList: Array<ChangesetWithConfirmed> = [];
   const bumpTypes = new Set(releases.map(rel => rel.type));
@@ -141,23 +134,21 @@ async function getChangesetList(
 async function getReleasesPerBumpType(
   bumpTypes: Set<VersionType>,
   releases: Release[],
-  chosenChangeTypeList: string[]
+  chosenChangeTypeList: ChangeTypeOption[]
 ) {
   const releaseWithChangeTypeList: Array<Release> = [];
 
   for (const bumpType of bumpTypes) {
     const changeTypeList: Array<ChangeType> = [];
     const pkgsForThisBumpType = releases
-      .filter((rel: { type: any }) => rel.type === bumpType)
-      .map((rel: { name: any }) => rel.name)
+      .filter((rel: Release) => rel.type === bumpType)
+      .map((rel: Release) => rel.name)
       .join(", ");
 
     log(chalk.yellow(`${bumpType} :`), chalk.cyan(pkgsForThisBumpType));
 
     for (const category of chosenChangeTypeList) {
-      const description = await cli.askQuestion(
-        `[ ${getKindTitle(category)} ]`
-      );
+      const description = await cli.askQuestion(`[ ${category.title} ]`);
       changeTypeList.push({ description, category });
     }
 
@@ -172,7 +163,7 @@ async function getReleasesPerBumpType(
 
 async function getReleasesPerPackage(
   releases: Release[],
-  chosenChangeTypeList: string[]
+  chosenChangeTypeList: ChangeTypeOption[]
 ) {
   const changesetList: Array<ChangesetWithConfirmed> = [];
   const previousAnswers: PreviousAnswers = {};
@@ -182,14 +173,11 @@ async function getReleasesPerPackage(
     const currChangeTypeList: ChangeType[] = [];
 
     for (const category of chosenChangeTypeList) {
-      const description = await getDescriptionWithPrev(
+      const description = await getDescriptionWithPreviousAnswer(
         previousAnswers,
         category
       );
-      currChangeTypeList.push({
-        description,
-        category
-      });
+      currChangeTypeList.push({ description, category });
     }
     const releaseWithChangeTypeList = [
       { ...release, changeTypes: currChangeTypeList }
@@ -253,55 +241,28 @@ export async function writeChangesetList({
       );
     }
 
-    let hasMajorChange = [...changeset.releases].find(c => c.type === "major");
-
-    if (hasMajorChange) {
-      warn(
-        "This Changeset includes a major change and we STRONGLY recommend adding more information to the changeset:"
-      );
-      warn("WHAT the breaking change is");
-      warn("WHY the change was made");
-      warn("HOW a consumer should update their code");
-    } else {
-      log(
-        chalk.green(
-          "If you want to modify or expand on the changeset summary, you can find it here"
-        )
-      );
-    }
+    warnIfMajor(changeset);
 
     const changesetPath = path.resolve(changesetBase, `${changesetID}.md`);
     info(chalk.blue(changesetPath));
 
-    if (open) {
-      // this is really a hack to reuse the logic embedded in `external-editor` related to determining the editor
-      const externalEditor = new ExternalEditor();
-      externalEditor.cleanup();
-      spawn(
-        externalEditor.editor.bin,
-        externalEditor.editor.args.concat([changesetPath]),
-        {
-          detached: true,
-          stdio: "inherit"
-        }
-      );
-    }
+    if (open) determineEditorHack(changesetPath);
   }
 }
 
-async function getDescriptionWithPrev(
+async function getDescriptionWithPreviousAnswer(
   previousAnswers: PreviousAnswers,
-  category: string
+  category: ChangeTypeOption
 ) {
-  const previousAnswer = previousAnswers[category];
+  const previousAnswer = previousAnswers[category.title];
   const question = `Do you want to reuse your previous answer for the current package? (${previousAnswer})`;
   if (previousAnswer) {
     const shouldReusePreviousAnswer = await cli.askConfirm(question);
     if (shouldReusePreviousAnswer) return previousAnswer;
   }
 
-  const description = await cli.askQuestion(`[ ${getKindTitle(category)} ]`);
-  previousAnswers[category] = description;
+  const description = await cli.askQuestion(`[ ${category.title} ]`);
+  previousAnswers[category.title] = description;
   return description;
 }
 
@@ -372,7 +333,7 @@ function getChangeTypesSection(releases: Release[], bumpType?: VersionType) {
 
   return `${changeTypes
     .filter(chk => chk.description)
-    .map(chk => `- [ ${getKindTitle(chk.category)} ] ${chk.description}`)
+    .map(chk => `- [ ${chk.category.title} ] ${chk.description}`)
     .join("\n")}\n`;
 }
 
