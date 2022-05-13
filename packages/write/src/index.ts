@@ -3,7 +3,8 @@ import path from "path";
 import prettier from "prettier";
 import humanId from "human-id";
 import { Changeset } from "@changesets/types";
-import { getChangesetContent } from "../../cli/src/commands/add/changeTypes";
+// @TODO update import to use modules
+import { getChangesetContent } from "../../cli/src/commands/add/writeChangeTypes";
 
 async function writeChangeset(
   changeset: Changeset,

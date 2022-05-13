@@ -204,4 +204,8 @@ describe("Changesets", () => {
       })
     );
   });
+
+  // @TODO tests for the new flow with change types
+  it("should create changeset with change types per bump type", () => {});
+  it("should create changeset with change types per package", () => {});
 });
