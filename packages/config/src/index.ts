@@ -22,6 +22,7 @@ export let defaultWrittenConfig = {
   linked: [] as Linked,
   access: "restricted",
   baseBranch: "master",
+  alwaysOpenEditor: true,
   updateInternalDependencies: "patch",
   ignore: [] as ReadonlyArray<string>
 } as const;
@@ -384,6 +385,9 @@ export let parse = (json: WrittenConfig, packages: Packages): Config => {
       json.baseBranch === undefined
         ? defaultWrittenConfig.baseBranch
         : json.baseBranch,
+
+    alwaysOpenEditor:
+      json.alwaysOpenEditor === undefined ? false : json.alwaysOpenEditor,
 
     updateInternalDependencies:
       json.updateInternalDependencies === undefined

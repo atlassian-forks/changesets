@@ -38,24 +38,16 @@ export function getKindTitle(kind: string) {
 
 type PreviousAnswers = { [key in string]: string };
 
-// function WithChangeTypes(
-//   target: any,
-//   propertyName: string,
-//   descriptor: TypedPropertyDescriptor<any>
-// ) {
-//   let method = descriptor.value!;
-
-//   descriptor.value = function() {
-//     if (!target.isWithChangeTypes) return null;
-//   };
-//   return method.apply(this, arguments);
-// }
-
 export class ChangesetsWithChangeTypes {
+  private config: Config;
   private isWithChangeTypes: boolean = false;
   private releases: Release[] = [];
   private chosenChangeTypeList: string[] = [];
   private changesetList: ChangesetWithConfirmed[] = [];
+
+  constructor(config: Config) {
+    this.config = config;
+  }
 
   async setChangeTypeList() {
     const chosenChangeTypeList = await getChangeTypeList();
@@ -79,13 +71,13 @@ export class ChangesetsWithChangeTypes {
     );
   }
 
-  // @WithChangeTypes
   async setSummaries() {
     if (!this.isWithChangeTypes) return;
     if (!this.changesetList.length)
       throw new Error("changesetList must be set");
 
-    for (let changeset of this.changesetList) await setSummary(changeset);
+    for (let changeset of this.changesetList)
+      await setSummary(changeset, this.config);
   }
 
   async getFinalChangesetList() {
@@ -312,13 +304,13 @@ async function getDescriptionWithPrev(
   return description;
 }
 
-async function setSummary(changeSet: ChangesetWithConfirmed) {
+async function setSummary(changeSet: ChangesetWithConfirmed, config: Config) {
   log(
     "Please enter a summary for this change (this will be in the changelogs)."
   );
   log(chalk.gray("  (submit empty line to open external editor)"));
 
-  let summary = await cli.askQuestion("Summary");
+  let summary = config.alwaysOpenEditor ? "" : await cli.askQuestion("Summary");
   if (summary.length === 0) {
     try {
       summary = cli.askQuestionWithEditor(

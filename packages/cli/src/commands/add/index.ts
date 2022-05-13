@@ -42,7 +42,11 @@ export default async function add(
     const changePackagesName = changedPackages
       .filter(a => a)
       .map(pkg => pkg.packageJson.name);
-    newChangeset = await createChangeset(changePackagesName, packages.packages);
+    newChangeset = await createChangeset(
+      changePackagesName,
+      packages.packages,
+      config
+    );
 
     if (Array.isArray(newChangeset)) {
       const functionArguments = {

@@ -7,7 +7,8 @@ import { error, log } from "@changesets/logger";
 import {
   Release,
   PackageJSON,
-  ChangesetWithConfirmed
+  ChangesetWithConfirmed,
+  Config
 } from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
@@ -103,10 +104,11 @@ function formatPkgNameAndVersion(pkgName: string, version: string) {
 
 export default async function createChangeset(
   changedPackages: Array<string>,
-  allPackages: Package[]
+  allPackages: Package[],
+  config: Config
 ): Promise<ChangesetWithConfirmed | Array<ChangesetWithConfirmed>> {
   const releases: Array<Release> = [];
-  const changeset = new ChangesetsWithChangeTypes();
+  const changeset = new ChangesetsWithChangeTypes(config);
 
   if (allPackages.length > 1) {
     const packagesToRelease = await getPackagesToRelease(
@@ -248,7 +250,7 @@ export default async function createChangeset(
   );
   log(chalk.gray("  (submit empty line to open external editor)"));
 
-  let summary = await cli.askQuestion("Summary");
+  let summary = config.alwaysOpenEditor ? "" : await cli.askQuestion("Summary");
   if (summary.length === 0) {
     try {
       summary = cli.askQuestionWithEditor(

@@ -83,6 +83,7 @@ export type Config = {
   linked: Linked;
   access: AccessType;
   baseBranch: string;
+  alwaysOpenEditor: boolean;
   /** The minimum bump type to trigger automatic update of internal dependencies that are part of the same release */
   updateInternalDependencies: "patch" | "minor";
   ignore: ReadonlyArray<string>;
@@ -100,6 +101,7 @@ export type WrittenConfig = {
   linked?: Linked;
   access?: AccessType;
   baseBranch?: string;
+  alwaysOpenEditor: boolean;
   /** The minimum bump type to trigger automatic update of internal dependencies that are part of the same release */
   updateInternalDependencies?: "patch" | "minor";
   ignore?: ReadonlyArray<string>;
