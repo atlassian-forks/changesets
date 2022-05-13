@@ -366,12 +366,18 @@ ${releases.map(release => `"${release.name}": ${release.type}`).join("\n")}
 ---\n`;
 }
 function getChangeTypesSection(releases: Release[], bumpType?: VersionType) {
-  const filteredReleases = bumpType
-    ? releases.filter(({ type }) => type === bumpType)
-    : releases;
+  let changeTypes: ChangeType[] = [];
 
-  return `${filteredReleases
-    .flatMap(rel => rel.changeTypes || [])
+  if (bumpType) {
+    const [oneRelease] = releases.filter(({ type }) => type === bumpType);
+    if (!oneRelease?.changeTypes) changeTypes = [];
+    else changeTypes = oneRelease.changeTypes;
+  } else {
+    changeTypes = releases.flatMap(rel => rel.changeTypes || []);
+  }
+
+  return `${changeTypes
+    .filter(chk => chk.description)
     .map(chk => `- [ ${getKindTitle(chk.category)} ] ${chk.description}`)
     .join("\n")}\n`;
 }
