@@ -50,6 +50,7 @@ export class ChangesetsWithChangeTypes {
   }
 
   async setChangeTypeList() {
+    if (!this.config.shouldAskForChangeTypes) return;
     const chosenChangeTypeList = await getChangeTypeList();
     this.chosenChangeTypeList = chosenChangeTypeList;
     this.isWithChangeTypes = chosenChangeTypeList?.length > 0;
