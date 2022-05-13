@@ -29,6 +29,7 @@ const allCategoriesOfChange = [
   "Types (Strictly related to the type system and should not have impact on runtime code) ",
   "Documentation (README, general docs, package.json metadata)",
   "Infra (Tooling, performance, things that are under the hood but should have no impact if a consumer upgraded)",
+  "UX (UX change)",
   "Misc (Anything else not noted above)"
 ];
 export function getKindTitle(kind: string) {
