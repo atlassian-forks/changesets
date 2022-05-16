@@ -4,11 +4,13 @@ import semver from "semver";
 
 import * as cli from "../../utils/cli-utilities";
 import { error, log } from "@changesets/logger";
-import { Release, PackageJSON } from "@changesets/types";
+import { Release, PackageJSON, VersionType } from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
 
 const { green, yellow, red, bold, blue, cyan } = chalk;
+
+type PackageNameJsonMap = Map<string, PackageJSON>;
 
 async function confirmMajorRelease(pkgJSON: PackageJSON) {
   if (semver.lt(pkgJSON.version, "1.0.0")) {
@@ -92,8 +94,61 @@ async function getPackagesToRelease(
   return [allPackages[0].packageJson.name];
 }
 
-function formatPkgNameAndVersion(pkgName: string, version: string) {
+export function formatPkgNameAndVersion(pkgName: string, version: string) {
   return `${bold(pkgName)}@${bold(version)}`;
+}
+
+function getBumpTypeTitle(bumpType: VersionType) {
+  return `Which packages should have a ${bumpType} bump?`;
+}
+
+const bumpTypes: { type: VersionType; title: VersionType }[] = [
+  { type: "major", title: red("major") as VersionType },
+  { type: "minor", title: green("minor") as VersionType },
+  { type: "patch", title: blue("patch") as VersionType }
+];
+
+export async function choosePkgsForBumpType(
+  title: string,
+  packages: string[],
+  pkgJsonsByName: PackageNameJsonMap
+) {
+  const choices = packages.map(pkgName => ({
+    name: pkgName,
+    message: formatPkgNameAndVersion(
+      pkgName,
+      pkgJsonsByName.get(pkgName)!.version
+    )
+  }));
+
+  return (
+    await cli.askCheckboxPlus(
+      bold(title),
+      [{ choices, name: "all packages" }],
+      x => {
+        // this removes changed packages and unchanged packages from the list
+        // of packages shown after selection
+        if (Array.isArray(x)) {
+          return x
+            .filter(x => x !== "all packages")
+            .map(x => cyan(x))
+            .join(", ");
+        }
+        return x;
+      }
+    )
+  ).filter(x => x !== "all packages");
+}
+
+function logRestWillBeBumped(
+  bumpType: VersionType,
+  packages: string[],
+  pkgJsonsByName: PackageNameJsonMap
+) {
+  log(`The following packages will be ${bumpType} bumped:`);
+  packages.forEach(pkgName => {
+    log(formatPkgNameAndVersion(pkgName, pkgJsonsByName.get(pkgName)!.version));
+  });
 }
 
 export default async function createChangeset(
@@ -108,106 +163,38 @@ export default async function createChangeset(
       allPackages
     );
 
-    let pkgJsonsByName = new Map(
+    let pkgJsonsByName: PackageNameJsonMap = new Map(
       allPackages.map(({ packageJson }) => [packageJson.name, packageJson])
     );
 
     let pkgsLeftToGetBumpTypeFor = new Set(packagesToRelease);
 
-    let pkgsThatShouldBeMajorBumped = (
-      await cli.askCheckboxPlus(
-        bold(`Which packages should have a ${red("major")} bump?`),
-        [
-          {
-            name: "all packages",
-            choices: packagesToRelease.map(pkgName => {
-              return {
-                name: pkgName,
-                message: formatPkgNameAndVersion(
-                  pkgName,
-                  pkgJsonsByName.get(pkgName)!.version
-                )
-              };
-            })
-          }
-        ],
-        x => {
-          // this removes changed packages and unchanged packages from the list
-          // of packages shown after selection
-          if (Array.isArray(x)) {
-            return x
-              .filter(x => x !== "all packages")
-              .map(x => cyan(x))
-              .join(", ");
-          }
-          return x;
-        }
-      )
-    ).filter(x => x !== "all packages");
+    for (const [i, bump] of bumpTypes.entries()) {
+      const packages = [...pkgsLeftToGetBumpTypeFor];
+      const isLast = i === bumpTypes.length - 1;
+      let pkgsForThisBumpType: string[] = [];
 
-    for (const pkgName of pkgsThatShouldBeMajorBumped) {
-      // for packages that are under v1, we want to make sure major releases are intended,
-      // as some repo-wide sweeping changes have mistakenly release first majors
-      // of packages.
-      let pkgJson = pkgJsonsByName.get(pkgName)!;
-
-      let shouldReleaseFirstMajor = await confirmMajorRelease(pkgJson);
-      if (shouldReleaseFirstMajor) {
-        pkgsLeftToGetBumpTypeFor.delete(pkgName);
-
-        releases.push({ name: pkgName, type: "major" });
-      }
-    }
-
-    if (pkgsLeftToGetBumpTypeFor.size !== 0) {
-      let pkgsThatShouldBeMinorBumped = (
-        await cli.askCheckboxPlus(
-          bold(`Which packages should have a ${green("minor")} bump?`),
-          [
-            {
-              name: "all packages",
-              choices: [...pkgsLeftToGetBumpTypeFor].map(pkgName => {
-                return {
-                  name: pkgName,
-                  message: formatPkgNameAndVersion(
-                    pkgName,
-                    pkgJsonsByName.get(pkgName)!.version
-                  )
-                };
-              })
-            }
-          ],
-          x => {
-            // this removes changed packages and unchanged packages from the list
-            // of packages shown after selection
-            if (Array.isArray(x)) {
-              return x
-                .filter(x => x !== "all packages")
-                .map(x => cyan(x))
-                .join(", ");
-            }
-            return x;
-          }
-        )
-      ).filter(x => x !== "all packages");
-
-      for (const pkgName of pkgsThatShouldBeMinorBumped) {
-        pkgsLeftToGetBumpTypeFor.delete(pkgName);
-
-        releases.push({ name: pkgName, type: "minor" });
-      }
-    }
-
-    if (pkgsLeftToGetBumpTypeFor.size !== 0) {
-      log(`The following packages will be ${blue("patch")} bumped:`);
-      pkgsLeftToGetBumpTypeFor.forEach(pkgName => {
-        log(
-          formatPkgNameAndVersion(pkgName, pkgJsonsByName.get(pkgName)!.version)
+      if (isLast) {
+        const bumpType = blue(bump.title) as VersionType;
+        logRestWillBeBumped(bumpType, packages, pkgJsonsByName);
+        pkgsForThisBumpType = packages;
+      } else {
+        pkgsForThisBumpType = await choosePkgsForBumpType(
+          getBumpTypeTitle(bump.title),
+          packages,
+          pkgJsonsByName
         );
-      });
+      }
 
-      for (const pkgName of pkgsLeftToGetBumpTypeFor) {
-        releases.push({ name: pkgName, type: "patch" });
+      for (const pkgName of pkgsForThisBumpType) {
+        if (bump.type === "major") {
+          const pkgJson = pkgJsonsByName.get(pkgName)!;
+          const shouldReleaseFirstMajor = await confirmMajorRelease(pkgJson);
+          if (!shouldReleaseFirstMajor) continue;
+        }
+
+        pkgsLeftToGetBumpTypeFor.delete(pkgName);
+        releases.push({ name: pkgName, type: bump.type });
       }
     }
   } else {
