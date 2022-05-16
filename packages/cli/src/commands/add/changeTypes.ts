@@ -62,8 +62,7 @@ export class ChangesetsWithChangeTypes {
     if (!this.changesetList.length)
       throw new Error("changesetList must be set");
 
-    for (let changeset of this.changesetList)
-      await setSummary(changeset, this.config);
+    for (let changeset of this.changesetList) await setSummary(changeset);
   }
 
   async getFinalChangesetList() {
@@ -200,13 +199,13 @@ async function getDescriptionWithPreviousAnswer(
 }
 
 // @TODO merge duplicate setSummary with existing
-async function setSummary(changeSet: ChangesetWithConfirmed, config: Config) {
+async function setSummary(changeSet: ChangesetWithConfirmed) {
   log(
     "Please enter a summary for this change (this will be in the changelogs)."
   );
   log(chalk.gray("  (submit empty line to open external editor)"));
 
-  let summary = config.alwaysOpenEditor ? "" : await cli.askQuestion("Summary");
+  let summary = await cli.askQuestion("Summary");
   if (summary.length === 0) {
     try {
       summary = cli.askQuestionWithEditor(

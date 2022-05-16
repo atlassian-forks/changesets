@@ -250,7 +250,7 @@ export default async function createChangeset(
   );
   log(chalk.gray("  (submit empty line to open external editor)"));
 
-  let summary = config.alwaysOpenEditor ? "" : await cli.askQuestion("Summary");
+  let summary = await cli.askQuestion("Summary");
   if (summary.length === 0) {
     try {
       summary = cli.askQuestionWithEditor(
