@@ -25,6 +25,5 @@
       "text":
         "Infra (Tooling, performance, things that are under the hood but should have no impact if a consumer upgraded)"
     },
-    { "title": "UX", "text": "UX (UX change)" },
     { "title": "Misc", "text": "Misc (Anything else not noted above)" }
 ]
