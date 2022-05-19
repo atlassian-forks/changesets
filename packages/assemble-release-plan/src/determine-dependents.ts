@@ -128,9 +128,6 @@ export default function determineDependents({
       .forEach(
         // @ts-ignore - I don't know how to make typescript understand that the filter above guarantees this and I got sick of trying
         ({ name, type, pkgJSON }: Release & { pkgJSON: PackageJSON }) => {
-          // At this point, we know if we are making a change
-          updated = true;
-
           const existing = releases.get(name);
           // For things that are being given a major bump, we check if we have already
           // added them here. If we have, we update the existing item instead of pushing it on to search.
@@ -141,16 +138,20 @@ export default function determineDependents({
             existing.type = "major";
 
             pkgsToSearch.push(existing);
+            updated = true; // At this point, we know if we are making a change
           } else {
-            let newDependent: InternalRelease = {
-              name,
-              type,
-              oldVersion: pkgJSON.version,
-              changesets: []
-            };
+            if (nextRelease.type !== "none") {
+              let newDependent: InternalRelease = {
+                name,
+                type,
+                oldVersion: pkgJSON.version,
+                changesets: []
+              };
 
-            pkgsToSearch.push(newDependent);
-            releases.set(name, newDependent);
+              pkgsToSearch.push(newDependent);
+              releases.set(name, newDependent);
+              updated = true; // At this point, we know if we are making a change
+            }
           }
         }
       );
