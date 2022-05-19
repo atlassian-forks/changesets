@@ -174,6 +174,8 @@ export default async function createChangeset(
       const isLast = i === bumpTypes.length - 1;
       let pkgsForThisBumpType: string[] = [];
 
+      if (!packages.length) break;
+
       if (isLast) {
         const bumpType = blue(bump.title) as VersionType;
         logRestWillBeBumped(bumpType, packages, pkgJsonsByName);
