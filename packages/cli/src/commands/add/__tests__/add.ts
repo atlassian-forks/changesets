@@ -14,6 +14,7 @@ import {
   askList
 } from "../../../utils/cli-utilities";
 import addChangeset from "..";
+import changeTypeList from "../changeTypeList.json";
 
 const f = fixtures(__dirname);
 
@@ -31,9 +32,18 @@ git.getChangedPackagesSinceRef.mockImplementation(({ ref }) => {
   return [];
 });
 
+function getChangeTypeDescriptions(releases: any, changeTypes: string[]) {
+  const questionsAmount = Object.keys(releases).length * changeTypes.length;
+  const changeTypesQuestions = Array(questionsAmount).fill(
+    "sample changeType description"
+  );
+  return changeTypesQuestions;
+}
+
 // @ts-ignore
 const mockUserResponses = mockResponses => {
   const summary = mockResponses.summary || "summary message mock";
+  const { changeTypes } = mockResponses;
   let majorReleases: Array<string> = [];
   let minorReleases: Array<string> = [];
   Object.entries(mockResponses.releases).forEach(([pkgName, type]) => {
@@ -61,6 +71,17 @@ const mockUserResponses = mockResponses => {
     "Is this your desired changeset?": true
   };
 
+  if (changeTypes) {
+    const isSameMsgPerBumpTypeMsg =
+      "Would you like to reuse the same message for all packages of this bump type?";
+
+    const changeTypeQuestionStepIdx = 1;
+    returnValues.splice(changeTypeQuestionStepIdx, 0, changeTypes.changeTypes);
+
+    // @ts-ignore
+    confirmAnswers[isSameMsgPerBumpTypeMsg] = changeTypes.isSameMsgPerBumpType;
+  }
+
   if (mockResponses.consoleSummaries && mockResponses.editorSummaries) {
     let i = 0;
     let j = 0;
@@ -70,6 +91,15 @@ const mockUserResponses = mockResponses => {
     askQuestionWithEditor.mockImplementation(
       () => mockResponses.editorSummaries[j++]
     );
+  } else if (changeTypes) {
+    const answers = [...changeTypes.descriptions, summary];
+    let descriptionCount = 0;
+    // @ts-ignore
+    askQuestion.mockImplementation(() => {
+      if (descriptionCount === answers.length)
+        throw new Error(`There was an unexpected call to askQuestion`);
+      return answers[descriptionCount++];
+    });
   } else {
     // @ts-ignore
     askQuestion.mockReturnValueOnce(summary);
@@ -205,7 +235,55 @@ describe("Changesets", () => {
     );
   });
 
-  // @TODO tests for the new flow with change types
-  it("should create changeset with change types per bump type", () => {});
-  it("should create changeset with change types per package", () => {});
+  it("should create changeset with change types per bump type", async () => {
+    const cwd = await f.copy("simple-project");
+
+    const releases = { "pkg-a": "patch" };
+    const changeTypes = [changeTypeList[0].title, changeTypeList[1].title];
+
+    const changeTypesConfig = {
+      changeTypes,
+      isSameMsgPerBumpType: true,
+      descriptions: getChangeTypeDescriptions(releases, changeTypes)
+    };
+
+    mockUserResponses({ releases, changeTypes: changeTypesConfig });
+    const config = { ...defaultConfig, shouldAskForChangeTypes: true };
+    await addChangeset(cwd, {}, config);
+
+    // @ts-ignore
+    const call = writeChangeset.mock.calls[0][0];
+    expect(call).toEqual(
+      expect.objectContaining({
+        releases: [
+          {
+            changeTypes: [
+              {
+                category: {
+                  text:
+                    "Added (New functionality, arg options, more UI elements)",
+                  title: "Added"
+                },
+                description: "sample changeType description"
+              },
+              {
+                category: {
+                  text:
+                    "Changed (Visual changes, internal changes, API changes)",
+                  title: "Changed"
+                },
+                description: "sample changeType description"
+              }
+            ],
+            name: "pkg-a",
+            type: "patch"
+          }
+        ],
+        summary: "summary message mock"
+      })
+    );
+  });
+
+  it("should create changeset with change types per package", () => {}); // @TODO
+  it("should create changeset with change types for single package", () => {}); // @TODO
 });
