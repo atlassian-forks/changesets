@@ -32,17 +32,22 @@ git.getChangedPackagesSinceRef.mockImplementation(({ ref }) => {
   return [];
 });
 
-function getChangeTypeDescriptions(releases: any, changeTypes: string[]) {
-  const questionsAmount = Object.keys(releases).length * changeTypes.length;
-  const changeTypesQuestions = Array(questionsAmount).fill(
+function getChangeTypeDescriptions(
+  questionsAmount: number,
+  providedDescriptions?: string[]
+) {
+  const sampleDescriptions = Array(questionsAmount).fill(
     "sample changeType description"
   );
-  return changeTypesQuestions;
+  const descriptions = providedDescriptions || [];
+  return [...descriptions, ...sampleDescriptions].slice(0, questionsAmount);
 }
+
+const MOCK_SUMMARY = "summary message mock";
 
 // @ts-ignore
 const mockUserResponses = mockResponses => {
-  const summary = mockResponses.summary || "summary message mock";
+  const summary = mockResponses.summary || MOCK_SUMMARY;
   const { changeTypes } = mockResponses;
   let majorReleases: Array<string> = [];
   let minorReleases: Array<string> = [];
@@ -68,18 +73,16 @@ const mockUserResponses = mockResponses => {
   });
 
   let confirmAnswers = {
-    "Is this your desired changeset?": true
+    "Is this your desired changeset?": true,
+    "Would you like to reuse the same message for all packages of this bump type?":
+      changeTypes?.isSameMsgPerBumpType,
+    "Do you want to reuse your previous answer for the current package?":
+      changeTypes?.shouldReusePrevPkgAnswer
   };
 
   if (changeTypes) {
-    const isSameMsgPerBumpTypeMsg =
-      "Would you like to reuse the same message for all packages of this bump type?";
-
     const changeTypeQuestionStepIdx = 1;
     returnValues.splice(changeTypeQuestionStepIdx, 0, changeTypes.changeTypes);
-
-    // @ts-ignore
-    confirmAnswers[isSameMsgPerBumpTypeMsg] = changeTypes.isSameMsgPerBumpType;
   }
 
   if (mockResponses.consoleSummaries && mockResponses.editorSummaries) {
@@ -92,7 +95,9 @@ const mockUserResponses = mockResponses => {
       () => mockResponses.editorSummaries[j++]
     );
   } else if (changeTypes) {
-    const answers = [...changeTypes.descriptions, summary];
+    const isSingleSummary = changeTypes.isSameMsgPerBumpType;
+    const summaries = isSingleSummary ? [MOCK_SUMMARY] : changeTypes.summaries;
+    const answers = [...changeTypes.descriptions, ...summaries];
     let descriptionCount = 0;
     // @ts-ignore
     askQuestion.mockImplementation(() => {
@@ -108,8 +113,10 @@ const mockUserResponses = mockResponses => {
   // @ts-ignore
   askConfirm.mockImplementation(question => {
     question = stripAnsi(question);
+    // remove question hint ...? (hint)
+    question = question.slice(0, question.indexOf("?") + 1);
     // @ts-ignore
-    if (confirmAnswers[question]) {
+    if (question in confirmAnswers) {
       // @ts-ignore
       return confirmAnswers[question];
     }
@@ -237,14 +244,24 @@ describe("Changesets", () => {
 
   it("should create changeset with change types per bump type", async () => {
     const cwd = await f.copy("simple-project");
+    const [changeTypeAdd, changeTypeChange] = changeTypeList;
 
-    const releases = { "pkg-a": "patch" };
-    const changeTypes = [changeTypeList[0].title, changeTypeList[1].title];
+    const releases = { "pkg-a": "patch", "pkg-b": "patch" };
+    const changeTypes = [changeTypeAdd.title, changeTypeChange.title];
+    const providedDescriptions = ["first description", "second description"];
+
+    const bumpTypesAmount = new Set(Object.values(releases)).size;
+    const questionsAmount = bumpTypesAmount * changeTypes.length;
+
+    const descriptions = getChangeTypeDescriptions(
+      questionsAmount,
+      providedDescriptions
+    );
 
     const changeTypesConfig = {
       changeTypes,
-      isSameMsgPerBumpType: true,
-      descriptions: getChangeTypeDescriptions(releases, changeTypes)
+      descriptions,
+      isSameMsgPerBumpType: true
     };
 
     mockUserResponses({ releases, changeTypes: changeTypesConfig });
@@ -260,19 +277,102 @@ describe("Changesets", () => {
             changeTypes: [
               {
                 category: {
-                  text:
-                    "Added (New functionality, arg options, more UI elements)",
-                  title: "Added"
+                  text: changeTypeAdd.text,
+                  title: changeTypeAdd.title
                 },
-                description: "sample changeType description"
+                description: providedDescriptions[0]
               },
               {
                 category: {
-                  text:
-                    "Changed (Visual changes, internal changes, API changes)",
-                  title: "Changed"
+                  text: changeTypeChange.text,
+                  title: changeTypeChange.title
                 },
-                description: "sample changeType description"
+                description: providedDescriptions[1]
+              }
+            ],
+            name: "pkg-a",
+            type: "patch"
+          },
+          {
+            changeTypes: [
+              {
+                category: {
+                  text: changeTypeAdd.text,
+                  title: changeTypeAdd.title
+                },
+                description: providedDescriptions[0]
+              },
+              {
+                category: {
+                  text: changeTypeChange.text,
+                  title: changeTypeChange.title
+                },
+                description: providedDescriptions[1]
+              }
+            ],
+            name: "pkg-b",
+            type: "patch"
+          }
+        ],
+        summary: "summary message mock"
+      })
+    );
+  });
+
+  it("should create changeset with change types per package", async () => {
+    const cwd = await f.copy("simple-project");
+    const [changeTypeAdd, changeTypeChange] = changeTypeList;
+
+    const releases = { "pkg-a": "patch", "pkg-b": "patch" };
+    const changeTypes = [changeTypeAdd.title, changeTypeChange.title];
+    const providedDescriptions = [
+      "first description",
+      "second description",
+      "third description",
+      "fourth description"
+    ];
+
+    const questionsAmount = Object.keys(releases).length * changeTypes.length;
+
+    const descriptions = getChangeTypeDescriptions(
+      questionsAmount,
+      providedDescriptions
+    );
+
+    const summariesAmount = Object.keys(releases).length;
+    const summaries = Array(summariesAmount).fill(MOCK_SUMMARY);
+    const changeTypesConfig = {
+      summaries,
+      changeTypes,
+      descriptions,
+      isSameMsgPerBumpType: false,
+      shouldReusePrevPkgAnswer: false
+    };
+
+    mockUserResponses({ releases, changeTypes: changeTypesConfig });
+    const config = { ...defaultConfig, shouldAskForChangeTypes: true };
+    await addChangeset(cwd, {}, config);
+
+    // @ts-ignore
+    const firstCall = writeChangeset.mock.calls[0][0];
+    expect(firstCall).toEqual(
+      expect.objectContaining({
+        releases: [
+          {
+            changeTypes: [
+              {
+                category: {
+                  text: changeTypeAdd.text,
+                  title: changeTypeAdd.title
+                },
+                description: providedDescriptions[0]
+              },
+              {
+                category: {
+                  text: changeTypeChange.text,
+                  title: changeTypeChange.title
+                },
+                description: providedDescriptions[1]
               }
             ],
             name: "pkg-a",
@@ -282,8 +382,35 @@ describe("Changesets", () => {
         summary: "summary message mock"
       })
     );
-  });
-
-  it("should create changeset with change types per package", () => {}); // @TODO
+    // @ts-ignore
+    const secondCall = writeChangeset.mock.calls[1][0];
+    expect(secondCall).toEqual(
+      expect.objectContaining({
+        releases: [
+          {
+            changeTypes: [
+              {
+                category: {
+                  text: changeTypeAdd.text,
+                  title: changeTypeAdd.title
+                },
+                description: providedDescriptions[2]
+              },
+              {
+                category: {
+                  text: changeTypeChange.text,
+                  title: changeTypeChange.title
+                },
+                description: providedDescriptions[3]
+              }
+            ],
+            name: "pkg-b",
+            type: "patch"
+          }
+        ],
+        summary: "summary message mock"
+      })
+    );
+  }); // @TODO
   it("should create changeset with change types for single package", () => {}); // @TODO
 });
