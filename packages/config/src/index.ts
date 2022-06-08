@@ -67,6 +67,13 @@ function getUnmatchedPatterns(
   );
 }
 
+function getBaseBranch(wconfig: WrittenConfig) {
+  if (typeof wconfig.getBaseBranch === "function")
+    return wconfig.getBaseBranch();
+  if (wconfig.baseBranch !== undefined) return wconfig.baseBranch;
+  return defaultWrittenConfig.baseBranch;
+}
+
 const havePackageGroupsCorrectShape = (
   pkgGroups: ReadonlyArray<PackageGroup>
 ) => {
@@ -385,10 +392,7 @@ export let parse = (json: WrittenConfig, packages: Packages): Config => {
     ),
     fixed,
     linked,
-    baseBranch:
-      json.baseBranch === undefined
-        ? defaultWrittenConfig.baseBranch
-        : json.baseBranch,
+    baseBranch: getBaseBranch(json),
 
     updateInternalDependencies:
       json.updateInternalDependencies === undefined
