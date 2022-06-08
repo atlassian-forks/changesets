@@ -36,18 +36,22 @@ const mockUserResponses = mockResponses => {
   const summary = mockResponses.summary || "summary message mock";
   let majorReleases: Array<string> = [];
   let minorReleases: Array<string> = [];
+  let patchReleases: Array<string> = [];
   Object.entries(mockResponses.releases).forEach(([pkgName, type]) => {
     if (type === "major") {
       majorReleases.push(pkgName);
     } else if (type === "minor") {
       minorReleases.push(pkgName);
+    } else if (type === "patch") {
+      patchReleases.push(pkgName);
     }
   });
   let callCount = 0;
   let returnValues = [
     Object.keys(mockResponses.releases),
     majorReleases,
-    minorReleases
+    minorReleases,
+    patchReleases
   ];
   // @ts-ignore
   askCheckboxPlus.mockImplementation(() => {
