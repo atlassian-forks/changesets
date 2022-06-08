@@ -20,25 +20,11 @@ export default async function init(cwd: string) {
 
   if (fs.existsSync(changesetBase)) {
     if (!fs.existsSync(path.join(changesetBase, "config.json"))) {
-      if (fs.existsSync(path.join(changesetBase, "config.js"))) {
-        error(
-          "It looks like you're using the version 1 `.changeset/config.js` file"
-        );
-        error(
-          "The format of the config object has significantly changed in v2 as well"
-        );
-        error(
-          " - we thoroughly recommend looking at the changelog for this package for what has changed"
-        );
-        error(
-          "Changesets will write the defaults for the new config, remember to transfer your options into the new config at `.changeset/config.json`"
-        );
-      } else {
-        error("It looks like you don't have a config file");
-        info(
-          "The default config file will be written at `.changeset/config.json`"
-        );
-      }
+      error("It looks like you don't have a config file");
+      info(
+        "The default config file will be written at `.changeset/config.json`"
+      );
+
       await fs.writeFile(
         path.resolve(changesetBase, "config.json"),
         defaultConfig
