@@ -208,4 +208,20 @@ describe("Changesets", () => {
       })
     );
   });
+
+  it("should generate a none changeset for a single package", async () => {
+    const cwd = await f.copy("simple-project");
+
+    mockUserResponses({ releases: { "pkg-a": "none" } });
+    await addChangeset(cwd, { empty: false }, defaultConfig);
+
+    // @ts-ignore
+    const call = writeChangeset.mock.calls[0][0];
+    expect(call).toEqual(
+      expect.objectContaining({
+        summary: "summary message mock",
+        releases: [{ name: "pkg-a", type: "none" }]
+      })
+    );
+  });
 });
