@@ -22,7 +22,7 @@ export let defaultWrittenConfig = {
   linked: [] as Linked,
   access: "restricted",
   baseBranch: "master",
-  alwaysOpenEditor: true,
+  alwaysOpenEditor: false,
   updateInternalDependencies: "patch",
   ignore: [] as ReadonlyArray<string>
 } as const;
