@@ -14,10 +14,10 @@ async function filterChangesetsSinceRef(
     cwd: changesetBase,
     ref: sinceRef
   });
-    
-  const newHashes = newChangesets.map(c => { 
-    const parts = c.split("/")
-    return parts[parts.length - 1]
+
+  const newHashes = newChangesets.map(c => {
+    const parts = c.split("/");
+    return parts[parts.length - 1];
   });
 
   return changesets.filter(dir => newHashes.includes(dir));
