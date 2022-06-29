@@ -1,5 +1,13 @@
 # @changesets/cli
 
+## 2.22.1
+
+### Patch Changes
+
+- Updated dependencies [[`dad117e`](https://github.com/changesets/changesets/commit/dad117ea756802c64936a9f3a619fb1a0b068067)]:
+  - @changesets/read@0.5.6
+  - @changesets/get-release-plan@3.0.9
+
 ## 2.22.0
 
 ### Minor Changes

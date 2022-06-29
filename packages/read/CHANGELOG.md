@@ -1,5 +1,11 @@
 # @changesets/read
 
+## 0.5.6
+
+### Patch Changes
+
+- [`dad117e`](https://github.com/changesets/changesets/commit/dad117ea756802c64936a9f3a619fb1a0b068067) - Fix a bug with changeset files not being read when a non-root current working directory is used along with the `sinceRef` argument
+
 ## 0.5.5
 
 ### Patch Changes
