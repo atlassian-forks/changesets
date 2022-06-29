@@ -92,7 +92,7 @@ export default async function add(
     info(chalk.blue(changesetPath));
 
     if (open) {
-      //  this is really a hack to reuse the logic embedded in `external-editor` related to determining the editor
+      // this is really a hack to reuse the logic embedded in `external-editor` related to determining the editor
       const externalEditor = new ExternalEditor();
       externalEditor.cleanup();
       spawn(
