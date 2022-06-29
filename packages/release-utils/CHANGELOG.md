@@ -1,5 +1,12 @@
 # @changesets/release-utils
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [[`dad117e`](https://github.com/changesets/changesets/commit/dad117ea756802c64936a9f3a619fb1a0b068067)]:
+  - @changesets/read@0.5.6
+
 ## 0.1.8
 
 ### Patch Changes
