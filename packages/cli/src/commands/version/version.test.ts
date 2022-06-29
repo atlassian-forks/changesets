@@ -67,6 +67,12 @@ const simpleChangeset3: NewChangeset = {
   id: "hot-day-today"
 };
 
+const simpleNoneChangeset: NewChangeset = {
+  summary: "Is this a summary?",
+  releases: [{ name: "pkg-a", type: "none" }],
+  id: "cake-is-lie"
+};
+
 const writeChangesets = (changesets: NewChangeset[], cwd: string) => {
   return Promise.all(
     changesets.map(changeset => writeChangeset(changeset, cwd))
@@ -301,6 +307,18 @@ describe("running version in a simple project", () => {
         },
       ]
     `);
+  });
+
+  it("should skip none changesets", async () => {
+    let cwd = f.copy("simple-project");
+    await writeChangesets([simpleNoneChangeset], cwd);
+    const spy = jest.spyOn(fs, "writeFile");
+
+    await version(cwd, defaultOptions, modifiedDefaultConfig);
+
+    expect(getPkgJSON("pkg-a", spy.mock.calls)).toEqual(
+      expect.objectContaining({ name: "pkg-a", version: "1.0.0" })
+    );
   });
 
   describe("when there are multiple changeset commits", () => {
