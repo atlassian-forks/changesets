@@ -40,28 +40,7 @@ export async function run(
   const packages = await getPackages(cwd);
 
   let config: Config;
-  try {
-    config = await read(cwd, packages);
-  } catch (e) {
-    let oldConfigExists = await fs.pathExists(
-      path.resolve(cwd, ".changeset/config.js")
-    );
-    if (oldConfigExists) {
-      error(
-        "It looks like you're using the version 1 `.changeset/config.js` file"
-      );
-      error("You'll need to convert it to a `.changeset/config.json` file");
-      error(
-        "The format of the config object has significantly changed in v2 as well"
-      );
-      error(
-        " - we thoroughly recommend looking at the changelog for this package for what has changed"
-      );
-      throw new ExitError(1);
-    } else {
-      throw e;
-    }
-  }
+  config = await read(cwd, packages);
 
   if (input.length < 1) {
     const { empty, open }: CliOptions = flags;

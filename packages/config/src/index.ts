@@ -67,6 +67,13 @@ function getUnmatchedPatterns(
   );
 }
 
+function getBaseBranch(wconfig: WrittenConfig) {
+  if (typeof wconfig.getBaseBranch === "function")
+    return wconfig.getBaseBranch();
+  if (wconfig.baseBranch !== undefined) return wconfig.baseBranch;
+  return defaultWrittenConfig.baseBranch;
+}
+
 const havePackageGroupsCorrectShape = (
   pkgGroups: ReadonlyArray<PackageGroup>
 ) => {
@@ -90,7 +97,12 @@ function isArray<T>(
   return Array.isArray(arg);
 }
 
-export let read = async (cwd: string, packages: Packages) => {
+export const read = async (cwd: string, packages: Packages) => {
+  const jsConfigPath = path.join(cwd, ".changeset", "config.js");
+  const jsConfigExists = await fs.pathExists(jsConfigPath);
+
+  if (jsConfigExists) return parse(require(jsConfigPath), packages);
+
   let json = await fs.readJSON(path.join(cwd, ".changeset", "config.json"));
   return parse(json, packages);
 };
@@ -380,10 +392,7 @@ export let parse = (json: WrittenConfig, packages: Packages): Config => {
     ),
     fixed,
     linked,
-    baseBranch:
-      json.baseBranch === undefined
-        ? defaultWrittenConfig.baseBranch
-        : json.baseBranch,
+    baseBranch: getBaseBranch(json),
 
     updateInternalDependencies:
       json.updateInternalDependencies === undefined
