@@ -204,4 +204,31 @@ describe("Changesets", () => {
       })
     );
   });
+
+  it("should generate changeset to patch a single package", async () => {
+    const cwd = await f.copy("simple-project");
+    const summary = "editor summary";
+
+    mockUserResponses({ releases: { "pkg-a": "patch" } });
+    // @ts-ignore
+    askQuestionWithEditor.mockReturnValueOnce(summary);
+
+    await addChangeset(
+      cwd,
+      { empty: false },
+      { ...defaultConfig, alwaysOpenEditor: true }
+    );
+
+    expect(askQuestion).not.toHaveBeenCalled();
+    expect(askQuestionWithEditor).toHaveBeenCalledTimes(1);
+
+    // @ts-ignore
+    const call = writeChangeset.mock.calls[0][0];
+    expect(call).toEqual(
+      expect.objectContaining({
+        summary,
+        releases: [{ name: "pkg-a", type: "patch" }]
+      })
+    );
+  });
 });

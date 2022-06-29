@@ -4,7 +4,7 @@ import semver from "semver";
 
 import * as cli from "../../utils/cli-utilities";
 import { error, log } from "@changesets/logger";
-import { Release, PackageJSON } from "@changesets/types";
+import { Release, PackageJSON, Config } from "@changesets/types";
 import { Package } from "@manypkg/get-packages";
 import { ExitError } from "@changesets/errors";
 
@@ -98,7 +98,8 @@ function formatPkgNameAndVersion(pkgName: string, version: string) {
 
 export default async function createChangeset(
   changedPackages: Array<string>,
-  allPackages: Package[]
+  allPackages: Package[],
+  config: Config
 ): Promise<{ confirmed: boolean; summary: string; releases: Array<Release> }> {
   const releases: Array<Release> = [];
 
@@ -232,7 +233,7 @@ export default async function createChangeset(
   );
   log(chalk.gray("  (submit empty line to open external editor)"));
 
-  let summary = await cli.askQuestion("Summary");
+  let summary = config.alwaysOpenEditor ? "" : await cli.askQuestion("Summary");
   if (summary.length === 0) {
     try {
       summary = cli.askQuestionWithEditor(
