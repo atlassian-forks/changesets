@@ -47,6 +47,7 @@ class FakeReleasePlan {
       linked: [],
       access: "restricted",
       baseBranch: "main",
+      alwaysOpenEditor: false,
       updateInternalDependencies: "patch",
       ignore: [],
       ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -84,6 +85,7 @@ async function testSetup(
       linked: [],
       access: "restricted",
       baseBranch: "main",
+      alwaysOpenEditor: false,
       updateInternalDependencies: "patch",
       ignore: [],
       ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -484,6 +486,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "patch",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -547,6 +550,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "patch",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -696,6 +700,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -781,6 +786,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -858,6 +864,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -935,6 +942,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1015,6 +1023,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1100,6 +1109,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1177,6 +1187,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1254,6 +1265,7 @@ describe("apply release plan", () => {
               linked: [],
               access: "restricted",
               baseBranch: "main",
+              alwaysOpenEditor: false,
               updateInternalDependencies,
               ignore: [],
               ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1335,6 +1347,7 @@ describe("apply release plan", () => {
             linked: [],
             access: "restricted",
             baseBranch: "main",
+            alwaysOpenEditor: false,
             updateInternalDependencies: "patch",
             ignore: [],
             ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1493,6 +1506,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           changelog: [
             path.resolve(__dirname, "test-utils/simple-get-changelog-entry"),
             null
@@ -1602,6 +1616,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "patch",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1687,6 +1702,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "minor",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1776,6 +1792,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "minor",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
@@ -1879,6 +1896,7 @@ describe("apply release plan", () => {
           linked: [],
           access: "restricted",
           baseBranch: "main",
+          alwaysOpenEditor: false,
           updateInternalDependencies: "minor",
           ignore: [],
           ___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH: {
